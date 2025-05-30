@@ -54,8 +54,8 @@ export async function action({ request }) {
   }
 }
 
-export default function Home({ actionData }) {
-  console.log({ newTodo: actionData });
+export default function Home({ loaderdata }) {
+  console.log({ newTodo: loaderdata });
 
   return (
     <main>
@@ -80,9 +80,9 @@ export default function Home({ actionData }) {
             <Input type="text" name="creator" />
           </Form>
           <ul className="flex flex-col gap-[10px] mt-[30px] w-full">
-            {actionData &&
-              Array.isArray(actionData) &&
-              actionData.map((item) => (
+            {loaderdata &&
+              Array.isArray(loaderdata) &&
+              loaderdata.map((item) => (
                 <li key={item._id}>
                   <Label htmlFor={`todo-${item._id}`} text={item.todo} />
                 </li>
