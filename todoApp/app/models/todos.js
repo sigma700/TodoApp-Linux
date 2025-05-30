@@ -24,3 +24,19 @@ export async function createNewTodo(todos) {
   let newTodo = await collection.insertOne(todos).toString();
   return newTodo;
 }
+
+export async function toggleIsCompleted(id) {
+  return collection.updateOne({ _id: ObjectId.createFromHexString(id) }, [
+    {
+      $set: {
+        isChecked: {
+          $cond: {
+            if: "$isChecked",
+            then: false,
+            else: true,
+          },
+        },
+      },
+    },
+  ]);
+}

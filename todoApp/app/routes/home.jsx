@@ -1,7 +1,7 @@
 import { Welcome } from "../welcome/welcome";
 import Input from "./components/input";
-import { createNewTodo, getTodos } from "../models/todos";
-import { Form } from "react-router";
+import { createNewTodo, getTodos, toggleisChecked } from "../models/todos";
+import { Form, useSubmit } from "react-router";
 import { validateInput } from "../server/validation";
 
 export function meta() {
@@ -35,37 +35,51 @@ export async function loader() {
 export async function action({ request }) {
   try {
     let formData = await request.formData();
-    let inputData = formData.get("creator");
-    console.log({ inputData });
+    let action = formData.get("_action");
 
-    //form validation
-    const fieldErrors = {
-      inputData: validateInput(inputData),
-    };
+    switch (action) {
+      case "create-item": {
+        let inputData = formData.get("creator");
+        //form validation
+        const fieldErrors = {
+          inputData: validateInput(inputData),
+        };
 
-    if (Object.values(fieldErrors).some(Boolean)) {
-      return { fieldErrors };
+        if (Object.values(fieldErrors).some(Boolean)) {
+          return { fieldErrors };
+        }
+
+        //defining the data structure of the object
+
+        let todoObj = {
+          todo: inputData,
+          isChecked: false,
+        };
+
+        //creating a new product by calling our helper function form the todos.js file
+
+        let newTodo = await createNewTodo(todoObj);
+        return newTodo;
+        break;
+      }
+      case "update-item": {
+        let itemId = formData.get("todo-item-id");
+        console.log({ itemId });
+
+        await toggleisChecked(itemId);
+        break;
+      }
     }
-
-    //defining the data structure of the object
-
-    let todoObj = {
-      todo: inputData,
-      isChecked: false,
-    };
-
-    //creating a new product by calling our helper function form the todos.js file
-
-    let newTodo = await createNewTodo(todoObj); //on form submission it will actually just call the action function and the new product will be created eventually
-    return newTodo;
   } catch (error) {
     console.error("Action Error", error);
     return { error: "Failed to create newTodo" };
   }
+  return null;
 }
 
 export default function Home({ loaderData, actionData }) {
   console.log({ loaderData });
+  let submit = useSubmit();
 
   return (
     <main>
@@ -87,6 +101,7 @@ export default function Home({ loaderData, actionData }) {
             />
           </nav>
           <Form action="" method="post">
+            <input type="hidden" value="create-item" name="_action" />
             <Input
               hasError={actionData?.fieldErrors?.inputData}
               type="text"
@@ -100,12 +115,29 @@ export default function Home({ loaderData, actionData }) {
           </Form>
           <ul className="flex flex-col gap-[10px] mt-[30px] w-full">
             {loaderData.map((item) => (
-              <li className="" key={item._id}>
-                <Form className="flex items-center justify-center">
-                  <input type="hidden" value="update-item" />
+              <li
+                className={`${item.isChecked ? "opacity-75" : ""}`}
+                key={item._id}
+              >
+                <Form
+                  onChange={(event) => {
+                    submit(event.currentTarget);
+                  }}
+                  className="flex items-center justify-center"
+                >
+                  <input type="hidden" name="_action" value="update-item" />
                   <input type="hidden" name="todo-item-id" value={item._id} />
-                  <Input type="checkbox" name="complete" />
-                  <Label htmlFor={`todo-${item._id}`} text={item.todo} />
+                  <Input
+                    type="checkbox"
+                    id={`complete-${item._id}`}
+                    name="complete"
+                    defaultChecked={item.isChecked}
+                  />
+                  <Label
+                    htmlFor={`complete-${item._id}`}
+                    text={item.todo}
+                    isChecked={item.isChecked}
+                  />
                 </Form>
               </li>
             ))}
@@ -116,10 +148,12 @@ export default function Home({ loaderData, actionData }) {
   );
 }
 
-export function Label({ htmlFor, text }) {
+export function Label({ htmlFor, text, isChecked }) {
   return (
     <label
-      className="p-[10px] w-full font-extralight bg-[#242834] text-white"
+      className={`${
+        isChecked ? "line-through text-gray-600" : ""
+      } p-[10px] w-full font-extralight bg-[#242834] text-white`}
       htmlFor={htmlFor}
     >
       {text}
