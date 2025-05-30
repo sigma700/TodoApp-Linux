@@ -1,7 +1,8 @@
 import { Welcome } from "../welcome/welcome";
 import Input from "./components/input";
-import { createNewProduct, getTodos } from "../models/todos";
+import { createNewTodo, getTodos } from "../models/todos";
 import { Form } from "react-router";
+import { validateInput } from "../server/validation";
 
 export function meta() {
   return [
@@ -15,11 +16,11 @@ export function meta() {
 export async function loader() {
   try {
     let result = await getTodos();
-    //console log the return value so as to bes sure that the server is running as it should fam
+    //console log the return value so as to be sure that the server is running as it should fam
     if (!result) {
       console.error("There was no result from your getTodos() function");
     }
-    console.log(result);
+    // console.log(result);
     let myTodos = result.map((item) => ({
       ...item,
       _id: item._id.toString(),
@@ -35,7 +36,16 @@ export async function action({ request }) {
   try {
     let formData = await request.formData();
     let inputData = formData.get("creator");
-    console.log(inputData);
+    console.log({ inputData });
+
+    //form validation
+    const fieldErrors = {
+      inputData: validateInput(inputData),
+    };
+
+    if (Object.values(fieldErrors).some(Boolean)) {
+      return { fieldErrors };
+    }
 
     //defining the data structure of the object
 
@@ -46,7 +56,7 @@ export async function action({ request }) {
 
     //creating a new product by calling our helper function form the todos.js file
 
-    let newTodo = await createNewProduct(todoObj); //on form submission it will actually just call the action function and the new product will be created eventually
+    let newTodo = await createNewTodo(todoObj); //on form submission it will actually just call the action function and the new product will be created eventually
     return newTodo;
   } catch (error) {
     console.error("Action Error", error);
@@ -54,8 +64,8 @@ export async function action({ request }) {
   }
 }
 
-export default function Home({ loaderdata }) {
-  console.log({ newTodo: loaderdata });
+export default function Home({ loaderData, actionData }) {
+  console.log({ loaderData });
 
   return (
     <main>
@@ -77,16 +87,28 @@ export default function Home({ loaderdata }) {
             />
           </nav>
           <Form action="" method="post">
-            <Input type="text" name="creator" />
+            <Input
+              hasError={actionData?.fieldErrors?.inputData}
+              type="text"
+              name="creator"
+            />
+            {actionData?.fieldErrors?.inputData ? (
+              <p className="text-red-600 text-[10px]">
+                {actionData?.fieldErrors.inputData}
+              </p>
+            ) : null}
           </Form>
           <ul className="flex flex-col gap-[10px] mt-[30px] w-full">
-            {loaderdata &&
-              Array.isArray(loaderdata) &&
-              loaderdata.map((item) => (
-                <li key={item._id}>
+            {loaderData.map((item) => (
+              <li className="" key={item._id}>
+                <Form className="flex items-center justify-center">
+                  <input type="hidden" value="update-item" />
+                  <input type="hidden" name="todo-item-id" value={item._id} />
+                  <Input type="checkbox" name="complete" />
                   <Label htmlFor={`todo-${item._id}`} text={item.todo} />
-                </li>
-              ))}
+                </Form>
+              </li>
+            ))}
           </ul>
         </div>
       </div>
